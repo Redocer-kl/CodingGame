@@ -87,27 +87,20 @@ def greedy_ai(state: State, estimate_state) -> 'Optional[list[tuple[int, int]]]'
     best_score = 0
     for i in moves:
         new_state = state.apply_move(i)
-        x = estimate(new_state, 1)
-        if x >= best_score:
-            best_score = x
+        if estimate(new_state) >= best_score:
+            best_score = estimate(new_state)
             best_move = i
     return best_move
 
-def estimate(state: State, depth) -> float:
+def estimate(state: State) -> float:
     moves = state.moves()
     if len(moves) == 0:
         return state.score
     best_score = 0
     for i in moves:
         new_state = state.apply_move(i)
-        score = new_state.score
-        if depth == 0:
-            if score > best_score:
-                best_score = score
-        else:
-            score = estimate(new_state, depth - 1)
-            if score > best_score:
-                best_score = score
+        if new_state.score > best_score:
+            best_score = new_state.score
     return state.score + best_score
 
 class Node:

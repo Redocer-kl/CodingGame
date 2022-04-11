@@ -41,6 +41,29 @@ class State:
     def next_checkpoint(self):
         return self.checkpoints[self.checkpoint_index % len(self.checkpoints)]
 
+    def next(self):
+        return self.checkpoints[(self.checkpoint_index + 1) % len(self.checkpoints)]
+
+
+    def ai(self):
+        dy = self.next_checkpoint()[1] - self.y
+        dx = self.next_checkpoint()[0] - self.x
+        dy1 = self.next()[1] - self.y
+        dx1 = self.next()[0] - self.x
+        beta = ((math.atan2(dy, dx) * 180 / math.pi) - self.angle) % 360
+        beta1 = ((math.atan2(dy1, dx1) * 180 / math.pi) - self.angle) % 360
+        if beta > 180:
+            beta -= 360
+        if beta1 > 180:
+            beta1 -= 360
+        if math.sqrt(self.vx * self.vx + self.vy * self.vy) > math.sqrt(dx*dx + dy*dy) * 0.1667:
+            if abs(beta1 - beta) < 10:
+                return Move(self.next()[0], self.next()[1], 200, "Gas")
+            return Move(self.next()[0], self.next()[1], 0, "Turn")
+        if abs(beta) > 4:
+            return Move(self.next_checkpoint()[0], self.next_checkpoint()[1], 0, "Turn")
+        return Move(self.next_checkpoint()[0], self.next_checkpoint()[1], 200, "Gas")
+
 
     def simulate(self, move: Move):
         desired_angle = 180 * math.atan2(move.y - self.y, move.x - self.x) / math.pi
@@ -68,21 +91,30 @@ def estimate(state):
     return state.checkpoint_index * 20000 - (dx ** 2 + dy ** 2) ** 0.5
 
 
+
 def create_random_moves(depth):
     ans = []
     for i in range(depth):
-        ans.append(Move(random.randint(0, 16000), random.randint(0, 9000), random.randint(0, 200)))
+        ans.append(Move(random.randint(0, 16000), random.randint(0, 9000), max(0, min(200, random.randint(-50, 250)))))
     return ans
 
-def random_search(state, depth):
+
+
+def random_search(state, pr_moves, depth):
     best_moves = []
-    best_score = -math.inf
-    simulations_count = 0
+    if pr_moves != None:
+        pr_moves.pop(0)
+        pr_moves += create_random_moves(1)
+        mid_state = state.copy()
+        for i in pr_moves:
+            mid_state.simulate(i)
+        best_score = estimate(mid_state)
+        best_moves = pr_moves
+    else:
+        best_score = -math.inf
     t1 = time.time() * 1000
-    moves_score = []
     while (time.time() * 1000) - t1 < 40:
         ans = create_random_moves(depth)
-        score = 0
         mid_state = state.copy()
         for i in ans:
             mid_state.simulate(i)
@@ -90,6 +122,13 @@ def random_search(state, depth):
         if best_score < score:
             best_score = score
             best_moves = ans
+    mid_state = state.copy()
+    for i in range(depth):
+        mid_state.simulate(mid_state.ai())
+    score = estimate(mid_state)
+    if best_score < score:
+        best_score = score
+        best_moves = [state.ai()]
     return(best_moves)
 
 def read_checkpoints():
@@ -103,23 +142,13 @@ def read_checkpoints():
 
 def main():
     checkpoints = read_checkpoints()
-    print(f'checkpoints={checkpoints}', file=sys.stderr)
-    predicted_state = None
     best_moves = None
     while True:
         state = State(checkpoints, *list(map(int, input().split())))
-        if predicted_state:
-            print(predicted_state, file=sys.stderr)
-            # Проверка, что наша симуляция работает точно так же как и официальная.
-            # Если раскомментировать строку ниже, то решение начнет падать с ошибкой каждый раз, 
-            # когда наша симуляция ошиблась, предсказывая к чему приведет наш предыдущий ход
-            # assert str(predicted_state) == str(state)
-
-        best_moves = random_search(state, depth=5)  # подходящую глубину нужно подобрать!
+        best_moves = random_search(state, best_moves, depth=5) 
         best_move = best_moves[0]
         print(str(best_move))
         state.simulate(best_move)
-        predicted_state = state
 
 
 if __name__ == '__main__':

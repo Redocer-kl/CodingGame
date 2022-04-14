@@ -41,21 +41,20 @@ class State:
     def sosed(self, x: int, y: int):
         color = self.color(x, y)
         ans = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]
-        sus = []
         final = []
-        for i in range(4):
-            if (ans[i][0] >= 0 and ans[i][0] < 15) and (ans[i][1] >= 0 and ans[i][1] < 15):
-                sus.append(ans[i])
-        for i in sus:
-            if (self.color(x, y) == self.color(i[0], i[1])):
-                final.append(i)
+        for i in ans:
+            if (0 <= i[0] < 15) and (0 <= i[1] < 15):
+                if (color == self.color(i[0], i[1])):
+                    final.append(i)
         return final
 
     def dfs(self, x: int, y: int, move: 'list[tuple[int, int]]'):
+        if (x,y) in move:
+            return move
         move.append((x, y))
         for i in self.sosed(x, y):
             x1, y1 = i[0], i[1]
-            if (x1, y1) not in set(move):
+            if (x1, y1) not in move:
                 move = self.dfs(x1, y1, move)
         return move
 
@@ -82,13 +81,13 @@ def greedy_ai(state: State, estimate_state) -> 'Optional[list[tuple[int, int]]]'
     moves = state.moves()
     if len(moves) == 0:
         return None
-    states = []
     best_move = []
-    best_score = 0
+    best_score = -10
     for i in moves:
         new_state = state.apply_move(i)
-        if estimate(new_state) >= best_score:
-            best_score = estimate(new_state)
+        score = estimate(new_state)
+        if score >= best_score:
+            best_score = score
             best_move = i
     return best_move
 
@@ -96,12 +95,23 @@ def estimate(state: State) -> float:
     moves = state.moves()
     if len(moves) == 0:
         return state.score
-    best_score = 0
+    best_num = 0
     for i in moves:
         new_state = state.apply_move(i)
-        if new_state.score > best_score:
-            best_score = new_state.score
-    return state.score + best_score
+        num = get_score(new_state)
+        if num > best_num:
+            best_num = num
+    return best_num
+
+def estimate2(state:State):
+    return get_score(state)
+
+def get_score(state:State):
+    s = state.score
+    move = state.moves()
+    for i in move:
+        s += (len(i) - 2)**2
+    return s
 
 class Node:
     def __init__(self, score: float, state: State, parent_node: Optional['Node'],

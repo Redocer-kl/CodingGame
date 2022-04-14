@@ -8,22 +8,6 @@ class State:
         self.columns = columns
         self.score = score
 
-    def color(self, x, y):
-        return self.columns[x][y]
-
-    def __str__(self):
-        w = len(self.columns)
-        if w == 0:
-            return '.'
-        h = max(len(col) for col in self.columns)
-        rows = []
-        for y in range(h - 1, -1, -1):
-            row = []
-            for x in range(w):
-                row.append('.' if y >= len(self.columns[x]) else str(self.columns[x][y]))
-            rows.append(' '.join(row))
-        return '\n'.join(rows)
-
     def moves(self) -> 'list[list[tuple[int, int]]]':
         visited = set()
         move = []
@@ -39,12 +23,12 @@ class State:
         return move
 
     def sosed(self, x: int, y: int):
-        color = self.color(x, y)
+        color = self.columns[x][y]
         ans = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]
         final = []
         for i in ans:
             if (0 <= i[0] < 15) and (0 <= i[1] < 15):
-                if (color == self.color(i[0], i[1])):
+                if color == self.columns[i[0]][i[1]]:
                     final.append(i)
         return final
 
@@ -77,7 +61,7 @@ class State:
         res = State(ans, self.score + (len(move) - 2) ** 2)
         return res
 
-def greedy_ai(state: State, estimate_state) -> 'Optional[list[tuple[int, int]]]':
+def greedy_ai(state: State, estimate_state, f) -> 'Optional[list[tuple[int, int]]]':
     moves = state.moves()
     if len(moves) == 0:
         return None
@@ -85,7 +69,10 @@ def greedy_ai(state: State, estimate_state) -> 'Optional[list[tuple[int, int]]]'
     best_score = -10
     for i in moves:
         new_state = state.apply_move(i)
-        score = estimate(new_state)
+        if f:
+            score = estimate(new_state)
+        else:
+            score = estimate2(new_state)
         if score >= best_score:
             best_score = score
             best_move = i
@@ -95,7 +82,7 @@ def estimate(state: State) -> float:
     moves = state.moves()
     if len(moves) == 0:
         return state.score
-    best_num = 0
+    best_num = -10
     for i in moves:
         new_state = state.apply_move(i)
         num = get_score(new_state)
@@ -136,8 +123,11 @@ def chokudai_solve(state: State) -> 'list[list[tuple[int, int]]]':
 def solve(state: State) -> 'list[list[tuple[int, int]]]':
     solution = []
     t1 = time.time()
-    while time.time() - t1 < 19:
-        move = greedy_ai(state, estimate)
+    while time.time() - t1 < 19.8:
+        if time.time() - t1 < 19.5:
+            move = greedy_ai(state, estimate, True)
+        else:
+            move = greedy_ai(state, estimate, False)
         if move is None:
             break
         solution.append(move)

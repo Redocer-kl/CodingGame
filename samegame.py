@@ -61,7 +61,7 @@ class State:
         res = State(ans, self.score + (len(move) - 2) ** 2)
         return res
 
-def greedy_ai(state: State, estimate_state, f) -> 'Optional[list[tuple[int, int]]]':
+def greedy_ai(state: State, estimate_state) -> 'Optional[list[tuple[int, int]]]':
     moves = state.moves()
     if len(moves) == 0:
         return None
@@ -69,10 +69,7 @@ def greedy_ai(state: State, estimate_state, f) -> 'Optional[list[tuple[int, int]
     best_score = -10
     for i in moves:
         new_state = state.apply_move(i)
-        if f:
-            score = estimate(new_state)
-        else:
-            score = estimate2(new_state)
+        score = estimate(new_state)
         if score >= best_score:
             best_score = score
             best_move = i
@@ -90,8 +87,6 @@ def estimate(state: State) -> float:
             best_num = num
     return best_num
 
-def estimate2(state:State):
-    return get_score(state)
 
 def get_score(state:State):
     s = state.score
@@ -124,10 +119,7 @@ def solve(state: State) -> 'list[list[tuple[int, int]]]':
     solution = []
     t1 = time.time()
     while time.time() - t1 < 19.8:
-        if time.time() - t1 < 19.5:
-            move = greedy_ai(state, estimate, True)
-        else:
-            move = greedy_ai(state, estimate, False)
+        move = greedy_ai(state, estimate)
         if move is None:
             break
         solution.append(move)
